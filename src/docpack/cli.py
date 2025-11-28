@@ -114,6 +114,13 @@ def run(source: str, transport: str = "stdio") -> None:
     serve(output, transport)
 
 
+def deck() -> None:
+    """Launch the Flight Deck TUI for interactive pipeline testing."""
+    from docpack.flight_deck import main as flight_deck_main
+
+    flight_deck_main()
+
+
 def info(docpack: str) -> None:
     """Show information about a docpack.
 
@@ -199,6 +206,12 @@ def main() -> None:
         help="Transport protocol (default: stdio)",
     )
 
+    # deck command
+    deck_parser = subparsers.add_parser(
+        "deck",
+        help="Launch Flight Deck TUI for interactive testing",
+    )
+
     # info command
     info_parser = subparsers.add_parser(
         "info",
@@ -214,6 +227,8 @@ def main() -> None:
         serve(args.docpack, args.transport)
     elif args.command == "run":
         run(args.source, args.transport)
+    elif args.command == "deck":
+        deck()
     elif args.command == "info":
         info(args.docpack)
 
