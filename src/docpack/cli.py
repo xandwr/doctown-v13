@@ -92,9 +92,11 @@ def serve(docpack: str, transport: str = "stdio") -> None:
     # Import here to avoid loading MCP unless needed
     from docpack.server import create_mcp_server
 
+    from typing import cast, Literal
+
     logger.info(f"Serving {docpack} via {transport}")
     mcp = create_mcp_server(docpack_path)
-    mcp.run(transport=transport)
+    mcp.run(transport=cast(Literal["stdio", "sse", "streamable-http"], transport))
 
 
 def run(source: str, transport: str = "stdio") -> None:
@@ -114,8 +116,33 @@ def run(source: str, transport: str = "stdio") -> None:
     serve(output, transport)
 
 
-def deck() -> None:
+def get_desktop_binary_path() -> Path | None:
+    """Find the DocOS desktop binary."""
+    install_path = Path.home() / ".doctown" / "desktop" / "DocOS"
+    if install_path.exists():
+        return install_path
+    return None
+
+
+def launch_windowed() -> None:
+    """Launch the TUI in the native desktop app."""
+    import subprocess
+
+    binary = get_desktop_binary_path()
+    if binary is None:
+        logger.error("DocOS Desktop not installed.")
+        logger.error("Get it here: https://doctown.app/download")
+        sys.exit(1)
+
+    subprocess.Popen([str(binary)], start_new_session=True)
+
+
+def deck(windowed: bool = False) -> None:
     """Launch the Flight Deck TUI for interactive pipeline testing."""
+    if windowed:
+        launch_windowed()
+        return
+
     from docpack.flight_deck import main as flight_deck_main
 
     flight_deck_main()
@@ -211,6 +238,12 @@ def main() -> None:
         "deck",
         help="Launch Flight Deck TUI for interactive testing",
     )
+    deck_parser.add_argument(
+        "--windowed",
+        "-w",
+        action="store_true",
+        help="Launch in native desktop window",
+    )
 
     # info command
     info_parser = subparsers.add_parser(
@@ -228,7 +261,7 @@ def main() -> None:
     elif args.command == "run":
         run(args.source, args.transport)
     elif args.command == "deck":
-        deck()
+        deck(windowed=args.windowed)
     elif args.command == "info":
         info(args.docpack)
 

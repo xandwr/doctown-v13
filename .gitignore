@@ -8,6 +8,8 @@ wheels/
 
 # Virtual environments
 .venv
+**/node_modules
+**/target
 
 # Dev
 /.claude
