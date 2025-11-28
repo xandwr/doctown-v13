@@ -1,87 +1,141 @@
-DocPack 🧊
+# DocPack
 
-The Universal Semantic Container
+**The Universal Semantic Container**
 
-Ingest Chaos. Freeze State. Query Everything.
+*Ingest Chaos. Freeze State. Query Everything.*
 
-📖 The Philosophy: " The Freezer"
+---
 
-Traditional AI systems try to "read" and "summarize" your data while they are importing it. This is slow, expensive, and prone to errors (hallucinations).
+## What is a `.docpack`?
 
-DocPack takes a different approach: The Freezer.
+A `.docpack` is a standard SQLite database—a single, portable file that works anywhere.
 
-We do not ask the AI to understand your data during ingestion. We simply freeze the state of your universe (files, folders, text) into a mathematically indexed snapshot. This process is instant and deterministic.
+It contains:
 
-    Ingest (Freezing): We map the territory. We don't write the travel guide.
+- **The Filesystem**: Raw data preserved exactly as it was (text, code, logs)
+- **The Vector Map**: Mathematical index linking concepts together (e.g., "flour" → "baking", `auth_token` → `login.rs`)
 
-    Query (Thawing): Understanding happens only when you ask a question. An AI Agent wakes up, enters the frozen snapshot, and uses tools to explore the data exactly as it exists.
+No internet connection. No vector database server. Just the file.
 
-📦 What is a .docpack?
+## Philosophy
 
-Technically, a .docpack is a standard SQLite database. It is a single, portable file that works on any device (Server, Laptop, Phone).
+Traditional AI systems try to "read" and "summarize" your data during import. This is slow, expensive, and prone to hallucinations.
 
-It contains two things:
+DocPack takes a different approach:
 
-    The Filesystem: Your raw data, preserved exactly as it was (text, code, logs).
+| Phase | What Happens |
+|-------|--------------|
+| **Ingest (Freezing)** | Map the territory. Don't write the travel guide. Fast, deterministic, offline. |
+| **Query (Thawing)** | Understanding happens only when you ask. An AI Agent enters the frozen snapshot and explores data exactly as it exists. |
 
-    The Vector Map: A mathematical index that links concepts together (e.g., linking "flour" to "baking" or auth_token to login.rs).
+---
 
-It is a Self-Contained Universe. You don't need an internet connection or a massive vector database server to open it. You just need the file.
+## Installation
 
-🚀 Who is this for?
+**Prerequisites:** Python 3.12+
 
-DocPack is domain-agnostic. If you have a zip file, we can turn it into a brain.
+```bash
+# Using uv (recommended)
+uv sync
 
-👩‍💻 The Senior Systems Architect
+# Or pip
+pip install -e .
+```
 
-    Input: A .zip of a 10-year-old legacy codebase (C++, Rust, Configs).
+## Quick Start
 
-    The Query: "Map out the dependency chain for the payment gateway."
+```bash
+# Freeze a folder or zip into a queryable docpack
+docpack freeze ./my-project -o project.docpack
 
-    The Magic: The Agent traverses the file tree, reads the raw code, follows imports via vector search, and outputs a technical graph. No more grepping through spaghetti code.
+# Start MCP server for AI agents
+docpack serve project.docpack
 
-📊 The Forensic Accountant
+# One-shot: freeze + serve (uses temp file)
+docpack run ./my-project
 
-    Input: A .zip containing 5,000 PDFs of receipts, Excel sheets, and email threads.
+# Interactive TUI for testing
+docpack deck
 
-    The Query: "Find all expenses related to 'Client Dinner' in Q3 that are over $200."
+# Inspect a docpack
+docpack info project.docpack
+```
 
-    The Magic: The Agent semantically links "steakhouse" on a receipt to "Client Dinner" in the prompt, verifies the date and amount, and produces a clean audit trail.
+---
 
-👵 The Hobbyist (Grandma)
+## Architecture
 
-    Input: A .zip of 30 years of digitized recipe cards and knitting patterns.
+```
+src/docpack/
+├── cli.py              # Command-line interface
+├── flight_deck.py      # Interactive TUI (Textual)
+├── chunkers/           # Text segmentation (paragraph-based)
+├── embedders/          # Vector embeddings (sentence-transformers)
+├── ingesters/          # Input handlers (folder, zip)
+├── models/             # Data classes (Document, Chunk, FileMetadata)
+├── protocols/          # Extensibility interfaces
+├── server/             # MCP server implementation
+├── storage/            # SQLite database layer
+└── utils/              # Binary detection, helpers
 
-    The Query: "I have blue yarn and blueberries. What can I make?"
+desktop/                # Native desktop app (Tauri + xterm.js)
+├── src/                # Frontend terminal emulator
+└── src-tauri/          # Rust PTY backend
+```
 
-    The Magic: The Agent finds the "Blueberry Crumble" recipe and a "Blue Wool Scarf" pattern, ignoring the beef stew recipes. It acts as a personal librarian.
+### Processing Pipeline
 
-⚙️ How It Works
+1. **Ingest** — Walk directories or extract zips, detect binary vs text
+2. **Chunk** — Split text on paragraph boundaries, merge small fragments
+3. **Embed** — Generate 384-dim vectors via `all-MiniLM-L6-v2`
+4. **Store** — Write to SQLite with indexed tables
 
-Phase 1: The Ingest (The Freezer)
+### MCP Server Tools
 
-Status: Fast, Deterministic, Offline.
+When serving a docpack, AI agents get three tools:
 
-    Explode: The system opens your Zip archive.
+| Tool | Description |
+|------|-------------|
+| `ls(path)` | List directory contents with file sizes |
+| `read(path)` | Read file content (text) or metadata (binary) |
+| `recall(query, limit)` | Semantic search via embedding similarity |
 
-    Chunk: Large files are sliced into small, readable segments.
+### Database Schema
 
-    Embed: We run a lightweight mathematical pass to calculate "vectors" (meaning) for every chunk.
+```sql
+files (path, content, size_bytes, extension, is_binary)
+chunks (id, file_path, chunk_index, text, start_char, end_char)
+vectors (chunk_id, embedding)
+metadata (key, value)
+```
 
-    Seal: Everything is written to output.docpack. No AI thinking occurs here.
+---
 
-Phase 2: The Runtime (The Agent Sandbox)
+## Desktop App
 
-Status: Intelligent, Adaptive, Agentic.
+Native GUI wrapper using Tauri + xterm.js:
 
-When you open a .docpack, you are dropping a smart AI Agent into a sandbox containing your files. The Agent has three tools:
+```bash
+cd desktop
+npm install
+npm run tauri:dev    # Development
+npm run tauri:build  # Production binary
+```
 
-    ls(): Look around folders.
+Spawns a pseudo-terminal running the Flight Deck TUI in a native window.
 
-    read(): Open a specific file to read the details.
+---
 
-    recall(): Search the vector map for concepts.
+## Tech Stack
 
-The Agent uses these tools to investigate your question dynamically, ensuring the answer is based on ground truth, not a fuzzy memory.
+| Layer | Technologies |
+|-------|--------------|
+| **Python** | sentence-transformers, mcp, numpy, textual |
+| **Rust/Node** | Tauri, portable-pty, xterm.js, Vite |
 
-Simple enough for Grandma. Deep enough for AWS. Start freezing your universes today.
+## Design Principles
+
+- **Protocol-based extensibility** — Swap chunkers, embedders, ingesters without inheritance
+- **Deterministic processing** — No network calls during freeze, reproducible embeddings
+- **One process = one docpack** — Prevents context pollution between document universes
+- **Lazy loading** — Models loaded on first use, not at import
